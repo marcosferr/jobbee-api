@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const slugify = require("slugify");
+
 const jobSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -91,4 +93,11 @@ const jobSchema = new mongoose.Schema({
   },
 });
 
+//Creating Job Slug before saving
+
+jobSchema.pre("save", function (next) {
+  //Creating slug before saving to DB
+  this.slug = slugify(this.title, { lower: true });
+  next();
+});
 module.exports = mongoose.model("Job", jobSchema);

@@ -14,7 +14,8 @@ const connectDatabase = require("./config/database");
 connectDatabase();
 
 //Importing all routes
-const jobs = require("./routes/jobs");
+app.use(express.json());
+const jobs = require("./routes/jobsRouter");
 
 app.use("/api/v1", jobs);
 
