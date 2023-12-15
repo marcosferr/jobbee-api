@@ -19,10 +19,7 @@ exports.getJob = catchAsyncErrors(async (req, res, next) => {
     $and: [{ _id: req.params.id }, { slug: req.params.slug }],
   });
   if (!job) {
-    return res.status(404).json({
-      success: false,
-      message: "Job not found.",
-    });
+    return next(new ErrorHandler(404, "Job not found"));
   }
   res.status(200).json({
     success: true,
@@ -63,10 +60,7 @@ exports.updateJob = catchAsyncErrors(async (req, res, next) => {
 
 exports.deleteJob = catchAsyncErrors(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid Job ID",
-    });
+    return next(new ErrorHandler(400, "Invalid Job ID"));
   }
 
   let job = await Job.findById(req.params.id);
@@ -80,12 +74,8 @@ exports.deleteJob = catchAsyncErrors(async (req, res, next) => {
   job = await Job.findByIdAndDelete(req.params.id);
 
   if (!job) {
-    return res.status(404).json({
-      success: false,
-      message: "Job not found",
-    });
+    return next(new ErrorHandler(404, "Job not found"));
   }
-
   res.status(200).json({
     success: true,
     message: "Job was deleted successfully",
@@ -138,10 +128,9 @@ exports.jobStats = catchAsyncErrors(async (req, res, next) => {
   ]);
 
   if (stats.length === 0) {
-    return res.status(200).json({
-      success: false,
-      message: `No stats found for ${req.params.topic}`,
-    });
+    return next(
+      new ErrorHandler(404, `No stats found for ${req.params.topic}`)
+    );
   }
   res.status(200).json({
     success: true,
