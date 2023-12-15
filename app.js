@@ -2,6 +2,9 @@ const express = require("express");
 const dotenv = require("dotenv");
 const ErrorHandler = require("./utils/errorHandler");
 app = express();
+const cookieParser = require("cookie-parser");
+
+const authRouter = require("./routes/auth");
 
 //Setting up config.env file variables
 dotenv.config({ path: "./config/config.env" });
@@ -21,13 +24,14 @@ process.on("uncaughtException", (err) => {
     process.exit(1);
   });
 });
-
+// Set cookie parser
+app.use(cookieParser());
 //Importing all routes
 app.use(express.json());
 const jobs = require("./routes/jobsRouter");
 
 app.use("/api/v1", jobs);
-
+app.use("/api/v1", authRouter);
 app.all("*", (req, res, next) => {
   next(new ErrorHandler(404, `${req.originalUrl} route not found`));
 });
