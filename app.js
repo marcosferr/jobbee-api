@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const ErrorHandler = require("./utils/errorHandler");
 const app = express();
 const cookieParser = require("cookie-parser");
+const fileUpload = require("express-fileupload");
 const userRouter = require("./routes/users");
 const authRouter = require("./routes/auth");
 
@@ -26,6 +27,8 @@ process.on("uncaughtException", (err) => {
 });
 // Set cookie parser
 app.use(cookieParser());
+// Handle file uploads
+app.use(fileUpload());
 //Importing all routes
 app.use(express.json());
 const jobs = require("./routes/jobsRouter");
