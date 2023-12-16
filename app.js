@@ -1,9 +1,9 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const ErrorHandler = require("./utils/errorHandler");
-app = express();
+const app = express();
 const cookieParser = require("cookie-parser");
-
+const userRouter = require("./routes/users");
 const authRouter = require("./routes/auth");
 
 //Setting up config.env file variables
@@ -29,7 +29,8 @@ app.use(cookieParser());
 //Importing all routes
 app.use(express.json());
 const jobs = require("./routes/jobsRouter");
-
+const users = require("./models/users");
+app.use("/api/v1", userRouter);
 app.use("/api/v1", jobs);
 app.use("/api/v1", authRouter);
 app.all("*", (req, res, next) => {
