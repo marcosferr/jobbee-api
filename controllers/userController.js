@@ -2,9 +2,13 @@ const User = require("../models/users");
 const catchAsyncErrors = require("../middlewares/catchAsyncErrors");
 const ErrorHandler = require("../utils/errorHandler");
 const sendToken = require("../utils/jwtToken");
+const fs = require("fs");
+const path = require("path");
 // Get current user profile => /api/v1/me
 exports.getUserProfile = catchAsyncErrors(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user.id).populate("jobs");
+  console.log(user);
+
   res.status(200).json({
     success: true,
     user,
@@ -58,3 +62,32 @@ exports.deleteProfile = catchAsyncErrors(async (req, res, next) => {
     message: "Your account has been deleted",
   });
 });
+
+async function deleteUserData(user, role) {
+  if (role === "employeer") {
+    await Job.deleteMany({ user: user });
+  }
+  if (role === "user") {
+    const appliedJobs = await Job.find({ "applicantsApplied.id": user }).select(
+      "+applicantsApplied"
+    );
+    appliedJobs.forEach(async (job) => {
+      job.applicantsApplied = job.applicantsApplied.filter(
+        (applicant) => applicant.id !== user
+      );
+      await job.save();
+    });
+    let directoryPath = path.join(__dirname, "../public/uploads/jobs", user);
+    fs.readdir(directoryPath, (err, files) => {
+      if (err) throw err;
+      files.forEach((file) => {
+        if (file.startsWith("resume_") && file.endsWith(".pdf")) {
+          fs.unlink(path.join(directoryPath, file), (err) => {
+            if (err) throw err;
+            console.log(`${file} deleted successfully`);
+          });
+        }
+      });
+    });
+  }
+}

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const ErrorHandler = require("../utils/errorHandler");
 const catchAsyncErrors = require("../middlewares/catchAsyncErrors");
 const APIFilters = require("../utils/apiFilters");
+const path = require("path");
 // Get all jobs  => /api/v1/jobs
 exports.getJobs = catchAsyncErrors(async (req, res, next) => {
   const apiFilters = new APIFilters(Job.find(), req.query)
@@ -25,6 +26,7 @@ exports.getJob = catchAsyncErrors(async (req, res, next) => {
   const job = await Job.findOne({
     $and: [{ _id: req.params.id }, { slug: req.params.slug }],
   });
+  console.log(job.user);
   if (!job) {
     return next(new ErrorHandler(404, "Job not found"));
   }
@@ -38,6 +40,7 @@ exports.getJob = catchAsyncErrors(async (req, res, next) => {
 
 exports.newJob = catchAsyncErrors(async (req, res, next) => {
   //adding user to body
+
   req.body.user = req.user.id;
   const job = await Job.create(req.body);
 
@@ -145,5 +148,64 @@ exports.jobStats = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: stats,
+  });
+});
+
+// Apply for a job using Resume => /api/v1/job/:id/apply
+exports.applyJob = catchAsyncErrors(async (req, res, next) => {
+  const job = await Job.findById(req.params.id).select("+applicantsApplied");
+  if (!job) {
+    return next(new ErrorHandler(404, "Job not found"));
+  }
+  //Check if job last date
+  if (job.lastDate < Date.now()) {
+    return next(new ErrorHandler(400, "Job has been expired"));
+  }
+
+  // Check if user has already applied for this job
+  if (req.user && req.user.id) {
+    const hasAlreadyApplied = job.applicantsApplied.some(
+      (applicant) => applicant == req.user.id.toString()
+    );
+
+    if (hasAlreadyApplied) {
+      return next(
+        new ErrorHandler(400, "You have already applied for this job")
+      );
+    }
+  }
+
+  const file = req.files.file;
+  //Check file type
+  const supportedFiles = /pdf|doc|docx/;
+  if (!supportedFiles.test(file.mimetype)) {
+    return next(new ErrorHandler(400, "Please upload a valid resume"));
+  }
+
+  //Check file size
+  if (file.size > process.env.MAX_FILE_UPLOAD) {
+    return next(
+      new ErrorHandler(
+        400,
+        `Please upload a resume less than ${process.env.MAX_FILE_UPLOAD}`
+      )
+    );
+  }
+
+  //Create custom file name
+  file.name = `resume_${req.user.id}${path.parse(file.name).ext}`;
+  file.mv(`${process.env.UPLOAD_PATH}/jobs/${file.name}`, async (err) => {
+    if (err) {
+      console.error(err);
+      return next(new ErrorHandler(500, "Problem with uploading resume"));
+    }
+  });
+
+  await Job.findByIdAndUpdate(req.params.id, {
+    $push: { applicantsApplied: req.user.id },
+  });
+  res.status(200).json({
+    success: true,
+    message: "You have successfully applied for this job",
   });
 });

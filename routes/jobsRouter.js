@@ -10,11 +10,16 @@ const {
   deleteJob,
   getJob,
   jobStats,
+  applyJob,
 } = require("../controllers/jobsController");
 
 const { isAuthenticatedUser, authorizeRoles } = require("../middlewares/auth");
 
 router.route("/jobs").get(getJobs);
+
+router
+  .route("/jobs/:id/apply")
+  .post(isAuthenticatedUser, authorizeRoles("user"), applyJob);
 
 router
   .route("/jobs")
