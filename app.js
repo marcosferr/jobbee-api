@@ -1,12 +1,37 @@
 const express = require("express");
 const dotenv = require("dotenv");
+
 const ErrorHandler = require("./utils/errorHandler");
 const app = express();
 const cookieParser = require("cookie-parser");
 const fileUpload = require("express-fileupload");
 const userRouter = require("./routes/users");
 const authRouter = require("./routes/auth");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const xssClean = require("xss-clean");
+const hpp = require("hpp");
+const cors = require("cors");
+//Setting up CORS
+app.use(cors());
+//Preventing HTTP param pollution
+app.use(hpp());
+//Preventing XSS attacks
+app.use(xssClean());
+//Preventing NoSQL injections
+app.use(mongoSanitize());
 
+//Setting up security headers
+app.use(helmet());
+
+//Setting up rate limiter
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, //10 mins
+  max: 100, //100 requests
+});
+
+app.use(limiter);
 //Setting up config.env file variables
 dotenv.config({ path: "./config/config.env" });
 const PORT = process.env.port;
