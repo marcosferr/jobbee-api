@@ -58,6 +58,11 @@ exports.updateJob = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler(404, "Job not found"));
   }
 
+  // Check if req.user.id is the owner of the job
+  if (job.user.toString() !== req.user.id) {
+    return next(new ErrorHandler(403, "Unauthorized access"));
+  }
+
   job = await Job.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -70,7 +75,30 @@ exports.updateJob = catchAsyncErrors(async (req, res, next) => {
 });
 
 //Delete a job  => /api/v1/job/:id
+// Update a job => /api/v1/jobs/:id
+exports.updateJob = catchAsyncErrors(async (req, res, next) => {
+  let job = await Job.findById(req.params.id);
+  if (!job) {
+    return next(new ErrorHandler(404, "Job not found"));
+  }
 
+  // Check if req.user.id is the owner of the job
+  if (job.user.toString() !== req.user.id) {
+    return next(new ErrorHandler(403, "Unauthorized access"));
+  }
+
+  job = await Job.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  res.status(200).json({
+    success: true,
+    message: "Job is updated",
+    data: job,
+  });
+});
+
+// Delete a job => /api/v1/job/:id
 exports.deleteJob = catchAsyncErrors(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next(new ErrorHandler(400, "Invalid Job ID"));
@@ -84,6 +112,11 @@ exports.deleteJob = catchAsyncErrors(async (req, res, next) => {
     });
   }
 
+  // Check if req.user.id is the owner of the job
+  if (job.user.toString() !== req.user.id) {
+    return next(new ErrorHandler(403, "Unauthorized access"));
+  }
+
   job = await Job.findByIdAndDelete(req.params.id);
 
   if (!job) {
@@ -94,7 +127,6 @@ exports.deleteJob = catchAsyncErrors(async (req, res, next) => {
     message: "Job was deleted successfully",
   });
 });
-
 // Search jobs with radios => /api/v1/jobs/:zipcode/:distance
 exports.getJobsInRadius = catchAsyncErrors(async (req, res, next) => {
   const { zipcode, distance } = req.params;

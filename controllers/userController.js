@@ -4,6 +4,8 @@ const ErrorHandler = require("../utils/errorHandler");
 const sendToken = require("../utils/jwtToken");
 const fs = require("fs");
 const path = require("path");
+const Job = require("../models/jobs");
+const APIFilters = require("../utils/apiFilters");
 // Get current user profile => /api/v1/me
 exports.getUserProfile = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findById(req.user.id).populate("jobs");
@@ -91,3 +93,58 @@ async function deleteUserData(user, role) {
     });
   }
 }
+//Adding controller methods that are only accesible to admin
+// Get all users => /api/v1/admin/users
+
+exports.getAllUsers = catchAsyncErrors(async (req, res, next) => {
+  const apiFilters = new APIFilters(User.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .searchByQuery()
+    .pagination();
+  const users = await apiFilters.query;
+
+  res.status(200).json({
+    success: true,
+    results: users.length,
+    data: users,
+  });
+});
+// Delete a user => /api/v1/admin/user/:id
+
+exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return next(
+      new ErrorHandler(404, `User not found with id: ${req.params.id}`)
+    );
+  }
+  await deleteUserData(user._id, user.role);
+  await user.remove();
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
+
+// Show all aplied jobs => /api/v1/me/applied
+
+exports.getAppliedJobs = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select("+appliedJobs");
+  const appliedJobs = await Job.find({ "applicantsApplied.id": user._id });
+  res.status(200).json({
+    success: true,
+    data: appliedJobs,
+  });
+});
+
+// Get all jobs created by user => /api/v1/me/jobs
+
+exports.getMyJobs = catchAsyncErrors(async (req, res, next) => {
+  const jobs = await Job.find({ user: req.user.id });
+  res.status(200).json({
+    success: true,
+    data: jobs,
+  });
+});
